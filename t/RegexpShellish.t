@@ -21,6 +21,7 @@ my @samples = qw(
    xaz
    xbz
    xcz
+   q...t
 ) ;
 
 my $re ;
@@ -58,6 +59,11 @@ sub {k( 'a**c',       'ac,AC,abc,ABC,a/c,A/C', { case_sensitive => 0 } )},
 sub {k( 'a**c',       'ac,abc,a/c',                               )},
 sub {k( 'a**c',       'ac,abc,a/c',            { star_star => 1 } )},
 sub {k( 'a**c',       'ac,abc',                { star_star => 0 } )},
+
+sub {k( 'a...c',      'ac,abc,a/c',                                 )},
+sub {k( 'a...c',      'ac,abc,a/c',            { dot_dot_dot => 1 } )},
+sub {k( 'a...c',      '',                      { dot_dot_dot => 0 } )},
+sub {k( 'q...t',      'q...t',                 { dot_dot_dot => 0 } )},
 
 sub { 'abc' =~ compile_shellish( 'a(?)c'                 ) ; ok( $1, 'b' ) },
 sub { 'abc' =~ compile_shellish( 'a(?)c', {parens => 1 } ) ; ok( $1, 'b' ) },

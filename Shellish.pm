@@ -38,11 +38,11 @@ Regexp::Shellish - Shell-like regular expressions
 =head1 DESCRIPTION
 
 Provides shell-like regular expressions.  The wildcards provided
-are '?', '*' and '**', where '**' is like '*' but matches '/'.  See
+are C<?>, C<*> and C<**>, where C<**> is like C<*> but matches C</>.  See
 L</compile_shellish> for details.
 
-Case sensitivity and treatment of conreucts like '**', '(a*b)', and '{a,b,c}'
-can be controlled.
+Case sensitivity and constructs like <**>, C<(a*b)>, and C<{a,b,c}>
+can be disabled.
 
 =over
 
@@ -55,7 +55,7 @@ use Exporter ;
 
 use vars qw( $VERSION @ISA @EXPORT_OK %EXPORT_TAGS ) ;
 
-$VERSION = '0.92' ;
+$VERSION = '0.93' ;
 
 @ISA = qw( Exporter ) ;
 
@@ -68,23 +68,27 @@ $VERSION = '0.92' ;
 
 =item compile_shellish
 
-Compiles a string containing a shellish regular expression a, returning a
+Compiles a string containing a 'shellish' regular expression, returning a
 Regexp reference.  Regexp references passed in are passed through
 unmolested.
 
-Here are the transformation rules:
+Here are the transformation rules from shellish expression terms to
+perl regular expression terms:
 
-   '*'  => '[^/]*'
-   '?'  => '.'
-   '**' => '.*'               ## unless { star_star => 0 }
+   Shellish  Perl RE
+   ========  =======
+   *         [^/]*
+   ?         .
+   **        .*               ## unless { star_star   => 0 }
+   ...       .*               ## unless { dot_dot_dot => 0 }
 
-   '('  => '('                ## unless { parens => 0 }
-   ')'  => ')'                ## unless { parens => 0 }
+   (         (                ## unless { parens => 0 }
+   )         )                ## unless { parens => 0 }
 
-   '{a,b,c}' => '(?:a|b|c)'   ## unless { braces => 0 }
+   {a,b,c}   (?:a|b|c)        ## unless { braces => 0 }
 
-   '\a' => 'a'                ## These are de-escaped and
-   '\*' => '\*'               ## passed to quotemeta()
+   \a        a                ## These are de-escaped and
+   \*        \*               ## passed to quotemeta()
 
 The wildcards treat newlines as normal characters.
 
@@ -100,6 +104,7 @@ The final parameter can be a hash reference containing options:
          anchors        => 0,   ## Doesn't put ^ and $ around the
 	                        ## resulting regexp
          case_sensitive => 0,   ## Make case insensitive
+         dot_dot_dot    => 0,   ## '...' is now just three '.' chars
          star_star      => 0,   ## '**' is now two '*' wildcards
 	 parens         => 0,   ## '(', ')' are now regular chars
 	 braces         => 0,   ## '{', '}' are now regular chars
@@ -120,13 +125,17 @@ sub compile_shellish {
       ? '.*'
       : '[^/]*[^/]*' ;
 
+   my $dot_dot_dot = ( ! exists $o->{dot_dot_dot} || $o->{dot_dot_dot} )
+      ? '.*'
+      : '\.\.\.' ;
+
    my $case = ( ! exists $o->{case_sensitive} || $o->{case_sensitive} )
       ? ''
       : 'i' ;
 
    my $anchors     = ( ! exists $o->{anchors} || $o->{anchors} ) ;
-   my $pass_parens = ( ! exists $o->{parens} || $o->{parens} ) ;
-   my $pass_braces = ( ! exists $o->{braces} || $o->{braces} ) ;
+   my $pass_parens = ( ! exists $o->{parens}  || $o->{parens} ) ;
+   my $pass_braces = ( ! exists $o->{braces}  || $o->{braces} ) ;
 
    my $brace_depth = 0 ;
 
@@ -135,6 +144,7 @@ sub compile_shellish {
    $re =~ s@
       (  \\.
       |  \*\*
+      |  \.\.\.
       |  .
       )
    @
@@ -146,6 +156,9 @@ sub compile_shellish {
       }
       elsif ( $1 eq '**' ) {
 	 $star_star ;
+      }
+      elsif ( $1 eq '...' ) {
+	 $dot_dot_dot;
       }
       elsif ( $pass_braces && $1 eq '{' ) {
 	 ++$brace_depth ;
@@ -178,7 +191,7 @@ Pass a regular expression and a list of possible values, get back a list of
 matching values.
 
    my @matches = shellish_glob( '*/*', @possibilities ) ;
-   my @matches = shellish_glob( '*/*', @possibilities, %options ) ;
+   my @matches = shellish_glob( '*/*', @possibilities, \%options ) ;
 
 =cut
 
