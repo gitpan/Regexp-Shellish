@@ -1,5 +1,8 @@
 Revision history for Perl extension Regexp::Shellish.
 
-1.0  Fri Apr 14 12:08:59 2000
+0.92 Thu Apr 20 02:21:23 EDT 2000
+	- Added { anchors => 0 } option & assoc. tests.
+
+0.9  Fri Apr 14 12:08:59 2000
 	- original version; created by h2xs 1.19
 

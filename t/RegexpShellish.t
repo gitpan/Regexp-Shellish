@@ -34,13 +34,7 @@ sub k {
 }
 
 
-
-
-
-
-
-
-my $tests = [
+my @tests = (
 
 sub {k( qr/a.*c/,     'ac,abc,a/c'          )},
 sub {k( 'a.*c',       ''                    )},
@@ -77,9 +71,11 @@ sub {k( 'x{a,b}z',    'xaz,xbz',   { braces => 1 }         )},
 sub {k( 'x{a,b}z',    '',          { braces => 0 }         )},
 sub { ok( 'x{a}z' =~ compile_shellish( 'x{a}z', { braces => 0 } ) )},
 
-] ;
+sub { ok( 'abc' !~ compile_shellish( 'c' ) ) },
+sub { ok( 'abc' =~ compile_shellish( 'c', { anchors => 0 } ) ) },
+) ;
 
-plan tests => scalar( @$tests ) ;
+plan tests => scalar( @tests ) ;
 
-$_->() for ( @$tests ) ;
+$_->() for ( @tests ) ;
 

@@ -11,11 +11,38 @@ package Regexp::Shellish ;
 
 Regexp::Shellish - Shell-like regular expressions
 
+=head1 SYNOPSIS
+
+   use Regexp::Shellish qw( :all ) ;
+
+   $re = compile_shellish( 'a/c*d' ) ;
+
+   ## This next one's like 'a*d' except that it'll
+   ## match 'a/d'.
+   $re = compile_shellish( 'a**d' ) ;
+
+   ## And here '**' won't match 'a/d', but behaves
+   ## like 'a*d', except for the possibility of high
+   ## cpu time consumption.
+   $re = compile_shellish( 'a**d', { star_star => 0 } ) ;
+
+   ## The next two result in identical $re1 and $re2.
+   ## The second is a noop so that Regexp references can
+   ## be easily accomodated.
+   $re1 = compile_shellish( 'a{b,c}d' ) ;
+   $re2 = compile_shellish( qr/\A(?:a(?:b|c)d)\Z/ ) ;
+
+   @matches = shellish_glob( $re, @possibilities ) ;
+
+
 =head1 DESCRIPTION
 
 Provides shell-like regular expressions.  The wildcards provided
 are '?', '*' and '**', where '**' is like '*' but matches '/'.  See
 L</compile_shellish> for details.
+
+Case sensitivity and treatment of conreucts like '**', '(a*b)', and '{a,b,c}'
+can be controlled.
 
 =over
 
@@ -28,7 +55,7 @@ use Exporter ;
 
 use vars qw( $VERSION @ISA @EXPORT_OK %EXPORT_TAGS ) ;
 
-$VERSION = '0.9' ;
+$VERSION = '0.92' ;
 
 @ISA = qw( Exporter ) ;
 
@@ -56,8 +83,8 @@ Here are the transformation rules:
 
    '{a,b,c}' => '(?:a|b|c)'   ## unless { braces => 0 }
 
-   '\a' => 'a'                ## These are de-escaped and passed to quotemeta()
-   '\*' => '\*'
+   '\a' => 'a'                ## These are de-escaped and
+   '\*' => '\*'               ## passed to quotemeta()
 
 The wildcards treat newlines as normal characters.
 
@@ -70,9 +97,12 @@ The final parameter can be a hash reference containing options:
    compile_shellish(
       '**',
       {
-         case_sensitive    => 0,   ## Make case insensitive
-         star_star         => 0,   ## Make '**' just be two '*' wildcards
-	 parens            => 0,   ## Treat '(' and ')' as regular chars
+         anchors        => 0,   ## Doesn't put ^ and $ around the
+	                        ## resulting regexp
+         case_sensitive => 0,   ## Make case insensitive
+         star_star      => 0,   ## '**' is now two '*' wildcards
+	 parens         => 0,   ## '(', ')' are now regular chars
+	 braces         => 0,   ## '{', '}' are now regular chars
       }
    ) ;
 
@@ -94,6 +124,7 @@ sub compile_shellish {
       ? ''
       : 'i' ;
 
+   my $anchors     = ( ! exists $o->{anchors} || $o->{anchors} ) ;
    my $pass_parens = ( ! exists $o->{parens} || $o->{parens} ) ;
    my $pass_braces = ( ! exists $o->{braces} || $o->{braces} ) ;
 
@@ -137,7 +168,7 @@ sub compile_shellish {
 
    croak "Unmatched '{' in '$orig'" if $brace_depth ;
 
-   return qr/\A(?$case:$re)\Z/s ;
+   return $anchors ? qr/\A(?$case:$re)\Z/s : qr/(?$case:$re)/s ;
 }
 
 
@@ -161,7 +192,7 @@ sub shellish_glob {
 
 =head1 AUTHOR
 
-Barrie Slaymaker
+Barrie Slaymaker <barries@slaysys.com>
 
 =cut
 
